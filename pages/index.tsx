@@ -1,36 +1,70 @@
-import React, { useEffect } from "react";
-import { JobCard, Layout } from "../components";
+import React, { useState } from "react";
+import {
+  JobCard,
+  Layout,
+  Loader,
+  Pagination,
+  SearchBox,
+  SearchLocation,
+  SearchType,
+} from "../components";
 import { API_URL, GithubJob } from "../lib/api";
 
 interface HomeProps {
   jobs: GithubJob[];
 }
 
-export default function Home({ jobs }: HomeProps) {
-  const handleSearch = () => {
+export default function Home(props: HomeProps) {
+  const [loading, setLoading] = useState(false);
+  const [jobs, setJobs] = useState<GithubJob[]>(props.jobs);
+  const [type, setType] = useState(false);
+  const [location, setLocation] = useState("");
+  const [page, setPage] = useState(0);
+
+  const handleSearch = (term?: string) => {
+    setLoading(true);
     fetch("/api", {
       method: "post",
       body: JSON.stringify({
-        fullTime: true,
-        location: "London",
-        page: 1,
-        term: "react",
+        term,
+        type,
+        location,
+        page,
       }),
     })
       .then((res) => res.json())
-      .then(console.log)
+      .then(setJobs)
+      .then(() => setLoading(false))
       .catch(console.log);
   };
 
-  useEffect(() => {
+  const handlePageChange = (count: number) => {
+    setPage(count - 1);
     handleSearch();
-  }, []);
+  };
 
   return (
     <Layout title="Home">
-      {jobs.map((job) => (
-        <JobCard key={job.id} {...job} />
-      ))}
+      <SearchBox onSearch={handleSearch} />
+      <div className="responsive">
+        <div className="search-widgets">
+          <SearchType checked={type} onChange={setType} />
+          <SearchLocation location={location} onChange={setLocation} />
+        </div>
+        <div className="full-width">
+          {loading ? (
+            <Loader />
+          ) : (
+            jobs.map((job) => <JobCard key={job.id} {...job} />)
+          )}
+          <Pagination
+            current={page + 1}
+            onChange={handlePageChange}
+            hasNext={jobs.length === 50}
+            disabled={loading}
+          />
+        </div>
+      </div>
     </Layout>
   );
 }
